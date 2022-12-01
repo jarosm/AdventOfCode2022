@@ -1,7 +1,7 @@
 ﻿
 Part1();
 
-Part2();
+//Part2();
 
 Console.WriteLine("end");
 Console.ReadLine();

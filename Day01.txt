@@ -1,0 +1,62 @@
+﻿
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+string[] ParseInput()
+{
+	var input = File.ReadAllLines("input.txt");
+
+	return input;
+}
+
+
+void Part1()
+{
+	var input = ParseInput();
+
+	int calories = 0;
+	int max = 0;
+	foreach (var inp in input)
+	{
+
+		if (inp.Length == 0)
+		{
+			if (calories > max)
+				max = calories;
+			calories = 0;
+		}
+		else
+			calories += int.Parse(inp);
+	}
+
+	Console.WriteLine($"Part 1: {max}");
+}
+
+
+void Part2()
+{
+	var input = ParseInput();
+
+	int calories = 0;
+	List<int> elfs = new List<int>();
+	foreach (var inp in input)
+	{
+
+		if (inp.Length == 0)
+		{
+			elfs.Add(calories);
+			calories = 0;
+		}
+		else
+			calories += int.Parse(inp);
+	}
+
+	var sorted = elfs.OrderByDescending(x => x).ToList();
+
+	Console.WriteLine($"Part 2: {sorted[0] + sorted[1] + sorted[2]}");
+}
