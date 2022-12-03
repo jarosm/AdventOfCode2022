@@ -1,0 +1,54 @@
+﻿
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+int[][][] ParseInput1()
+{
+	var input = File.ReadAllLines("input.txt").Select(s => new int[][] { 
+		s.Substring(0, s.Length / 2).ToCharArray().Select(b => b >= 'a' && b <= 'z' ? (int)(b - 'a') + 1 : (int)(b - 'A') + 27).ToArray(), 
+		s.Substring(s.Length / 2, s.Length / 2).ToCharArray().Select(b => b >= 'a' && b <= 'z' ? (int)(b - 'a') + 1 : (int)(b - 'A') + 27).ToArray() 
+	}).ToArray();
+
+	return input;
+}
+
+
+int[][] ParseInput2()
+{
+	var input = File.ReadAllLines("input.txt").Select(s => s.ToCharArray().Select(b => b >= 'a' && b <= 'z' ? (int)(b - 'a') + 1 : (int)(b - 'A') + 27).ToArray()).ToArray();
+
+	return input;
+}
+
+
+void Part1()
+{
+	var input = ParseInput1();
+
+	int sum = 0;
+	for (int i = 0; i < input.Length; i++)
+	{
+		sum += input[i][0].Intersect(input[i][1]).ToArray()[0];
+	}
+
+	Console.WriteLine($"Part 1: {sum}");
+}
+
+
+void Part2()
+{
+	var input = ParseInput2();
+
+	int sum = 0;
+	for (int i = 0; i < input.Length; i += 3)
+	{
+		sum += input[i].Intersect(input[i + 1]).Intersect(input[i + 2]).ToArray()[0];
+	}
+
+	Console.WriteLine($"Part 2: {sum}");
+}
