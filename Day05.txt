@@ -1,0 +1,89 @@
+﻿
+int CountOfStacks = 9;
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+(Stack<char>[] stacks, List<int[]> moves) ParseInput()
+{
+	var input = File.ReadAllLines("input.txt");
+
+	Stack<char>[] reverseStacks = new Stack<char>[CountOfStacks];
+	Stack<char>[] stacks = new Stack<char>[CountOfStacks];
+	List<int[]> moves = new List<int[]>();
+
+	foreach (var line in input)
+	{
+		if (line.Contains("["))
+		{
+			int si = 0;
+			for (int i = 1; i < line.Length; i += 4)
+			{
+				if (line[i] >= 'A' && line[i] <= 'Z')
+				{
+					if (reverseStacks[si] == null)
+						reverseStacks[si] = new Stack<char>();
+					reverseStacks[si].Push(line[i]);
+				}
+				si++;
+			}
+		}
+		else if (line.Contains("move"))
+		{
+			moves.Add(line.Replace("move ", "").Replace(" from ", ";").Replace(" to ", ";").Split(';').Select(a => int.Parse(a)).ToArray());
+		}
+	}
+
+	for (int i = 0; i < CountOfStacks; i++)
+	{
+		stacks[i] = new Stack<char>();
+		while (reverseStacks[i].Count > 0)
+			stacks[i].Push(reverseStacks[i].Pop());
+	}
+
+	return (stacks, moves);
+}
+
+
+void Part1()
+{
+	var input = ParseInput();
+
+	foreach (var move in input.moves)
+	{
+		for (int i = 1; i <= move[0]; i++)
+			input.stacks[move[2] - 1].Push(input.stacks[move[1] - 1].Pop());
+	}
+
+	string top = "";
+	for (int i = 0; i < CountOfStacks; i++)
+		top += input.stacks[i].Peek().ToString();
+
+	Console.WriteLine($"Part 1: {top}");
+}
+
+
+void Part2()
+{
+	var input = ParseInput();
+
+	foreach (var move in input.moves)
+	{
+		Stack<char> stack = new Stack<char>();
+		for (int i = 1; i <= move[0]; i++)
+			stack.Push(input.stacks[move[1] - 1].Pop());
+		while (stack.Count > 0)
+			input.stacks[move[2] - 1].Push(stack.Pop());
+	}
+
+	string top = "";
+	for (int i = 0; i < CountOfStacks; i++)
+		top += input.stacks[i].Peek().ToString();
+
+	Console.WriteLine($"Part 2: {top}");
+}
