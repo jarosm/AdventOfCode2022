@@ -1,0 +1,58 @@
+﻿
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+string ParseInput()
+{
+	var input = File.ReadAllLines("input.txt");
+
+	return input[5];
+}
+
+
+void Part1()
+{
+	var input = ParseInput();
+
+	int index = 0;
+	while (index < input.Length - 3)
+	{
+		if (input[index] != input[index + 1] && input[index] != input[index + 2] && input[index] != input[index + 3]
+			&& input[index + 1] != input[index + 2] && input[index + 1] != input[index + 3] && input[index + 2] != input[index + 3])
+			break;
+		index++;
+	}
+
+	Console.WriteLine($"Part 1: {index + 4}");
+}
+
+
+void Part2()
+{
+	var input = ParseInput();
+
+	int index = 0;
+	while (index < input.Length - 13)
+	{
+		Dictionary<char, int> store = new Dictionary<char, int>();
+		int i = 0;
+		while (i < 14)
+		{
+			if (!store.ContainsKey(input[index + i]))
+				store.Add(input[index + i], 1);
+			else
+				break;
+			i++;
+		}
+		if (i == 14)
+			break;
+		index++;
+	}
+
+	Console.WriteLine($"Part 2: {index + 14}");
+}
