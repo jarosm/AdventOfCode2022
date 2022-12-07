@@ -1,0 +1,137 @@
+﻿
+var root = new Dir() { Name = "/" };
+
+ParseInput();
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+void ParseInput()
+{
+	var input = File.ReadAllLines("input.txt");
+
+	Dir? current = root;
+
+	for (int i = 0; i < input.Length; i++)
+	{
+		if (current == null)
+			break;
+
+		var temp = input[i].Split(' ');
+
+		if (input[i].StartsWith("$")) // command
+		{
+			if (temp[1] == "cd") // go to dir
+			{
+				if (temp[2] == "/")
+					current = root;
+				else if (temp[2] == "..")
+					current = current.Parent;
+				else
+					current = current.SubDirs.Find(d => d.Name == temp[2]);
+			}
+		}
+		else // file or dir
+		{
+			if (temp[0] == "dir")
+			{
+				current.SubDirs.Add(new Dir()
+				{
+					Name = temp[1],
+					Parent = current
+				});
+			}
+			else
+				current.Files.Add((temp[1], int.Parse(temp[0])));
+		}
+	}
+}
+
+
+void Part1()
+{
+	int sizeAtMost100k = 0;
+
+	root.CalculateSizeAndSumAtMost100k(ref sizeAtMost100k);
+
+	Console.WriteLine($"Part 1: {sizeAtMost100k}");
+}
+
+
+void Part2()
+{
+	int minFreeRequired = 30000000 - (70000000 - root.Size);
+
+	Console.WriteLine($"Part 2: {root.GetMinFreedAmount(minFreeRequired)}");
+}
+
+
+public class Dir
+{
+	public string Name;
+	public int Size;
+	public Dir? Parent;
+	public List<Dir> SubDirs;
+	public List<(string Name, int Size)> Files;
+
+	public Dir()
+	{
+		Name = "";
+		Size = 0;
+		SubDirs = new List<Dir>();
+		Files = new List<(string Name, int Size)>();
+	}
+
+	public void Print(int level)
+	{
+		for (int i = 0; i < level; i++)
+			Console.Write("  ");
+		Console.WriteLine($"- {Name} (dir)");
+		foreach (var dir in SubDirs)
+			dir.Print(level + 1);
+		foreach (var file in Files)
+		{
+			for (int i = 0; i < level + 1; i++)
+				Console.Write("  ");
+			Console.WriteLine($"- {file.Name} (file, size={file.Size})");
+		}
+	}
+
+	public void CalculateSizeAndSumAtMost100k(ref int sizeAtMost100k)
+	{
+		foreach (var dir in SubDirs)
+		{
+			dir.CalculateSizeAndSumAtMost100k(ref sizeAtMost100k);
+			Size += dir.Size;
+		}
+		foreach (var file in Files)
+			Size += file.Size;
+
+		if (Size <= 100000)
+			sizeAtMost100k += Size;
+	}
+
+	public int GetMinFreedAmount(int minFreeRequired)
+	{
+		if (Size < minFreeRequired)
+			return -1;
+
+		int free = Size;
+
+		foreach (var dir in SubDirs)
+		{
+			int temp = dir.GetMinFreedAmount(minFreeRequired);
+			if (temp == -1)
+				continue;
+			if (temp < free)
+				free = temp;
+		}
+
+		return free;
+	}
+}
