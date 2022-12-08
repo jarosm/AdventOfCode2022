@@ -1,0 +1,113 @@
+﻿
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+int[][] ParseInput()
+{
+	var input = File.ReadAllLines("input.txt").Select(a => Array.ConvertAll(a.ToCharArray(), c => (int)Char.GetNumericValue(c))).ToArray();
+
+	return input;
+}
+
+
+void Part1()
+{
+	var input = ParseInput();
+
+	Dictionary<(int row, int col), int> visibility = new Dictionary<(int row, int col), int>();
+
+	int rowCount = input.Length;
+	int colCount = input[0].Length;
+	int[] up = new int[colCount], down = new int[colCount];
+
+	for (int i = 0; i < colCount; i++)
+	{
+		up[i] = -1;
+		down[i] = -1;
+	}
+
+	for (int r = 0; r < rowCount; r++)
+	{
+		int left = -1, right = -1;
+		for (int c = 0; c < colCount; c++)
+		{
+			if (input[r][c] > left) // from left
+			{
+				left = input[r][c];
+				visibility[(r, c)] = 1;
+			}
+
+			if (input[r][colCount - 1 - c] > right) // from right
+			{
+				right = input[r][colCount - 1 - c];
+				visibility[(r, colCount - 1 - c)] = 1;
+			}
+
+			if (input[r][c] > up[c]) // from up
+			{
+				up[c] = input[r][c];
+				visibility[(r, c)] = 1;
+			}
+
+			if (input[rowCount - 1 - r][c] > down[c]) // from down
+			{
+				down[c] = input[rowCount - 1 - r][c];
+				visibility[(rowCount - 1 - r, c)] = 1;
+			}
+		}
+	}
+
+	Console.WriteLine($"Part 1: {visibility.Keys.Count}");
+}
+
+
+void Part2()
+{
+	var input = ParseInput();
+
+	Dictionary<(int row, int col), int> scores = new Dictionary<(int row, int col), int>();
+
+	int rowCount = input.Length;
+	int colCount = input[0].Length;
+
+	for (int r = 1; r < rowCount - 1; r++)
+	{
+		for (int c = 1; c < colCount - 1; c++)
+		{
+			int s = 1;
+
+			// to left
+			int i = 1;
+			while (c - i > 0 && input[r][c] > input[r][c - i])
+				i++;
+			s *= i;
+
+			// to right
+			i = 1;
+			while (c + i < colCount - 1 && input[r][c] > input[r][c + i])
+				i++;
+			s *= i;
+
+			// to up
+			i = 1;
+			while (r - i > 0 && input[r][c] > input[r - i][c])
+				i++;
+			s *= i;
+
+			// to down
+			i = 1;
+			while (r + i < rowCount - 1 && input[r][c] > input[r + i][c])
+				i++;
+			s *= i;
+
+			scores[(r, c)] = s;
+		}
+	}
+
+	Console.WriteLine($"Part 2: {scores.Values.Max()}");
+}
