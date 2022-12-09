@@ -1,0 +1,112 @@
+﻿
+using System.Drawing;
+
+Point[] knots;
+Dictionary<(int X, int Y), int> visited;
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+int[][] ParseInput()
+{
+	var input = File.ReadAllLines("input.txt").Select(a => a.Split(' ')
+		.Select(b => b == "U" ? 0 : b == "D" ? 1 : b == "L" ? 2 : b == "R" ? 3 : int.Parse(b)).ToArray()).ToArray();
+
+	return input;
+}
+
+
+void Part1()
+{
+	var input = ParseInput();
+
+	knots = new Point[2];
+	for (int i = 0; i < 2; i++)
+		knots[i] = new Point() {  X = 0, Y = 0 };
+
+	visited = new Dictionary<(int X, int Y), int>();
+	visited[(0, 0)] = 1;
+
+	for (int i = 0; i < input.Length; i++)
+	{
+		var dir = GetDirectionDiffs(input[i][0]);
+		for (int j = 0; j < input[i][1]; j++)
+		{
+			knots[0].X += dir.X;
+			knots[0].Y += dir.Y;
+
+			MoveKnot(1);
+			visited[(knots[1].X, knots[1].Y)] = 1;
+		}
+	}
+
+	Console.WriteLine($"Part 1: {visited.Keys.Count}");
+}
+
+
+void Part2()
+{
+	var input = ParseInput();
+
+	knots = new Point[10];
+	for (int i = 0; i < 10; i++)
+		knots[i] = new Point() { X = 0, Y = 0 };
+
+	visited = new Dictionary<(int X, int Y), int>();
+	visited[(0, 0)] = 1;
+
+	for (int i = 0; i < input.Length; i++)
+	{
+		var dir = GetDirectionDiffs(input[i][0]);
+		for (int j = 0; j < input[i][1]; j++)
+		{
+			knots[0].X += dir.X;
+			knots[0].Y += dir.Y;
+
+			for (int k = 1; k < 10; k++)
+				MoveKnot(k);
+
+			visited[(knots[9].X, knots[9].Y)] = 1;
+		}
+	}
+
+	Console.WriteLine($"Part 2: {visited.Keys.Count}");
+}
+
+
+(int X, int Y) GetDirectionDiffs(int dir)
+{
+	switch (dir)
+	{
+		case 0: return (0, 1);
+		case 1: return (0, -1);
+		case 2: return (-1, 0);
+		case 3: return (1, 0);
+		default: return (0, 0);
+	}
+}
+
+
+void MoveKnot(int index)
+{
+	int xdiff = knots[index - 1].X - knots[index].X;
+	int ydiff = knots[index - 1].Y - knots[index].Y;
+
+	if (Math.Abs(xdiff) > 1)
+	{
+		knots[index].X += xdiff / 2;
+		if (ydiff != 0)
+			knots[index].Y += ydiff / Math.Abs(ydiff);
+	}
+	else if (Math.Abs(ydiff) > 1)
+	{
+		if (xdiff != 0)
+			knots[index].X += xdiff / Math.Abs(xdiff);
+		knots[index].Y += ydiff / 2;
+	}
+}
