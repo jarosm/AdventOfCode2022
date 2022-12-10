@@ -1,0 +1,89 @@
+﻿
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+(int command, int value)[] ParseInput()
+{
+	var input = File.ReadAllLines("input.txt").Select(a => a == "noop" ? (0, 0) : (1, int.Parse(a.Split(' ')[1]))).ToArray();
+
+	return input;
+}
+
+
+void Part1()
+{
+	var input = ParseInput();
+
+	int regX = 1, regXPrev = 0;
+	int cycle = 0;
+	int nextCheck = 20;
+	int sum = 0;
+
+	for (int i = 0; i < input.Length; i++)
+	{
+		regXPrev = regX;
+		if (input[i].command == 0)
+			cycle++;
+		else
+		{
+			cycle += 2;
+			regX += input[i].value;
+		}
+
+		if (cycle >= nextCheck)
+		{
+			sum += nextCheck * regXPrev;
+			nextCheck += 40;
+		}
+
+		if (nextCheck > 220)
+			break;
+	}
+
+	Console.WriteLine($"Part 1: {sum}");
+}
+
+
+void Part2()
+{
+	var input = ParseInput();
+
+	int regX = 1;
+	int charCounter = 0;
+
+	Console.WriteLine($"Part 2: ");
+
+	for (int i = 0; i < input.Length; i++)
+	{
+		if (input[i].command == 0)
+		{
+			Console.Write(charCounter == regX - 1 || charCounter == regX || charCounter == regX + 1 ? "#" : ".");
+			charCounter++;
+		}
+		else
+		{
+			Console.Write(charCounter == regX - 1 || charCounter == regX || charCounter == regX + 1 ? "#" : ".");
+			charCounter++;
+			if (charCounter > 39)
+			{
+				Console.WriteLine();
+				charCounter = 0;
+			}
+			Console.Write(charCounter == regX - 1 || charCounter == regX || charCounter == regX + 1 ? "#" : ".");
+			charCounter++;
+
+			regX += input[i].value;
+		}
+
+		if (charCounter > 39)
+		{
+			Console.WriteLine();
+			charCounter = 0;
+		}
+	}
+}
