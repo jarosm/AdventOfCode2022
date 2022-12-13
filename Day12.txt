@@ -1,0 +1,107 @@
+﻿
+int[][] map;
+(int Y, int X) start = (0, 0), end = (0, 0);
+
+ParseInput();
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+void ParseInput()
+{
+	var input = File.ReadAllLines("input.txt");
+
+	map = new int[input.Length][];
+	for (int i = 0; i < input.Length; i++)
+	{
+		map[i] = new int[input[i].Length];
+		for (int j = 0; j < input[i].Length; j++)
+		{
+			switch (input[i][j])
+			{
+				case 'S':
+					map[i][j] = (int)'a';
+					start = (i, j);
+					break;
+				case 'E':
+					map[i][j] = (int)'z';
+					end = (i, j);
+					break;
+				default:
+					map[i][j] = (int)input[i][j];
+					break;
+			}
+		}
+	}
+}
+
+
+void Part1()
+{
+	Console.WriteLine($"Part 1: {GetPath()}");
+}
+
+
+void Part2()
+{
+	List<int> steps = new List<int>();
+
+	for (int i = 0; i < map.Length; i++)
+	{
+		for (int j = 0; j < map[i].Length; j++)
+		{
+			if (map[i][j] == 'a')
+			{
+				start = (i, j);
+				steps.Add(GetPath());
+			}
+		}
+	}
+
+	Console.WriteLine($"Part 2: {steps.Min(a => a > 0 ? a : int.MaxValue)}");
+}
+
+
+int GetPath()
+{
+	Queue<(int Y, int X, int Steps)> queue = new Queue<(int Y, int X, int Steps)>();
+	Dictionary<(int Y, int X), int> visited = new Dictionary<(int Y, int X), int>();
+	int steps = 0;
+	(int dY, int dX)[] diffs = new (int dY, int dX)[] { (1, 0), (0, 1), (-1, 0), (0, -1) };
+
+	visited[(start.Y, start.X)] = 0;
+	queue.Enqueue((start.Y, start.X, 0));
+
+	while (queue.Count > 0)
+	{
+		var pos = queue.Dequeue();
+
+		if (pos.Y == end.Y && pos.X == end.X)
+		{
+			steps = pos.Steps;
+			break;
+		}
+
+		for (int i = 0; i < diffs.Length; i++)
+		{
+			if (visited.ContainsKey((pos.Y + diffs[i].dY, pos.X + diffs[i].dX)))
+				continue;
+
+			if (pos.Y + diffs[i].dY < 0 || pos.Y + diffs[i].dY >= map.Length || pos.X + diffs[i].dX < 0 || pos.X + diffs[i].dX >= map[0].Length)
+				continue;
+
+			if (map[pos.Y + diffs[i].dY][pos.X + diffs[i].dX] > map[pos.Y][pos.X] + 1)
+				continue;
+
+			visited[(pos.Y + diffs[i].dY, pos.X + diffs[i].dX)] = 1;
+			queue.Enqueue((pos.Y + diffs[i].dY, pos.X + diffs[i].dX, pos.Steps + 1));
+		}
+	}
+
+	return steps;
+}
