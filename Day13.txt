@@ -1,0 +1,203 @@
+﻿
+using System.Collections;
+
+List<(PacketItem Left, PacketItem Right)> packets = new List<(PacketItem Left, PacketItem Right)>();
+ParseInput();
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+void ParseInput()
+{
+	var input = File.ReadAllLines("input.txt");
+
+	int index = 0;
+	while (index < input.Length)
+	{
+		int i = 0;
+		var left = ParseSet(input[index], ref i);
+		index++;
+
+		i = 0;
+		var right = ParseSet(input[index], ref i);
+		index++;
+
+		packets.Add((left, right));
+
+		index++;
+	}
+}
+
+
+void Part1()
+{
+	int sum = 0;
+	for (int i = 0; i < packets.Count; i++)
+	{
+		int compareResult = CompareSets(packets[i].Left, packets[i].Right);
+		if (compareResult == 1) // right order
+			sum += i + 1;
+	}
+
+	Console.WriteLine($"Part 1: {sum}");
+}
+
+
+void Part2()
+{
+	var input = File.ReadAllLines("input.txt").Where(a => a.Length > 0).ToList();
+	input.Add("[[2]]");
+	input.Add("[[6]]");
+
+	List<string> sorted = new List<string>();
+	sorted.Add(input[0]);
+
+	for (int i = 1; i < input.Count; i++)
+	{
+		int position = 0;
+		var left = ParseSet(input[i], ref position);
+
+		int index = 0;
+		while (index < sorted.Count)
+		{
+			position = 0;
+			var right = ParseSet(sorted[index], ref position);
+
+			if (CompareSets(left, right) > 0) // input is lower
+				break;
+
+			index++;
+		}
+
+		if (index < sorted.Count)
+			sorted.Insert(index, input[i]);
+		else
+			sorted.Add(input[i]);
+	}
+
+	Console.WriteLine($"Part 2: {(sorted.IndexOf("[[2]]") + 1) * (sorted.IndexOf("[[6]]") + 1)}");
+}
+
+
+PacketItem ParseSet(string packet, ref int index)
+{
+	PacketItem set = new PacketItem();
+	index++;
+
+	while (packet[index] != ']')
+	{
+		// set
+		if (packet[index] == '[')
+		{
+			set.Items.Add(ParseSet(packet, ref index));
+			index++;
+			continue;
+		}
+
+		// comma between values
+		if (packet[index] == ',')
+		{
+			index++;
+			continue;
+		}
+
+		// not end of set, then it's a number
+		if (packet[index] != ']')
+		{
+			string num = "";
+			while (packet[index] != ',' && packet[index] != ']')
+			{
+				num += packet[index];
+				index++;
+			}
+			set.Items.Add(int.Parse(num));
+		}
+	}
+
+	return set;
+}
+
+
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+#pragma warning disable CS8605 // Unboxing a possibly null value.
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+#pragma warning disable CS8604 // Possible null reference argument.
+int CompareSets(PacketItem left, PacketItem right)
+{
+	int result = 0;
+
+	for (int i = 0; i < left.Items.Count; i++)
+	{
+		if (i >= right.Items.Count) // ran out of items
+		{
+			result = -1;
+			break;
+		}
+
+		// ints
+		if (left.Items[i].GetType() == typeof(int) && right.Items[i].GetType() == typeof(int))
+		{
+			if ((int)left.Items[i] < (int)right.Items[i])
+			{
+				result = 1;
+				break;
+			}
+			else if ((int)right.Items[i] < (int)left.Items[i])
+			{
+				result = -1;
+				break;
+			}
+			else
+				continue;
+		}
+
+		// left is int, right is set
+		if (left.Items[i].GetType() == typeof(int))
+		{
+			int temp = (int)left.Items[i];
+			left.Items[i] = new PacketItem();
+			((PacketItem)left.Items[i]).Items.Add(temp);
+		}
+
+		// left is set, right is int
+		if (right.Items[i].GetType() == typeof(int))
+		{
+			int temp = (int)right.Items[i];
+			right.Items[i] = new PacketItem();
+			((PacketItem)right.Items[i]).Items.Add(temp);
+		}
+
+		// sets
+		if (left.Items[i].GetType() == typeof(PacketItem) && right.Items[i].GetType() == typeof(PacketItem))
+		{
+			int res = CompareSets((PacketItem)left.Items[i], (PacketItem)right.Items[i]);
+			if (res != 0)
+			{
+				result = res;
+				break;
+			}
+			else
+				continue;
+		}
+	}
+
+	if (result == 0 && left.Items.Count < right.Items.Count)
+		result = 1;
+
+	return result;
+}
+#pragma warning restore CS8604 // Possible null reference argument.
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+#pragma warning restore CS8605 // Unboxing a possibly null value.
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+
+
+public class PacketItem
+{
+	public ArrayList Items = new ArrayList();
+}
