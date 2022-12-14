@@ -1,0 +1,147 @@
+﻿
+Dictionary<(int X, int Y), int> cave = new Dictionary<(int X, int Y), int>(); // 1 - rock, 2 - sand
+int MinX = int.MaxValue, MaxX = int.MinValue, MaxY = int.MinValue;
+
+ParseInput();
+Part1();
+
+cave = new Dictionary<(int X, int Y), int>();
+MinX = int.MaxValue;
+MaxX = int.MinValue;
+MaxY = int.MinValue;
+
+ParseInput();
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+void ParseInput()
+{
+	var input = File.ReadAllLines("input.txt").Select(a => a.Replace(" -> ", ";").Split(';').Select(b => b.Split(',').Select(c => int.Parse(c)).ToArray()).ToArray()).ToArray();
+
+	for (int i = 0; i < input.Length; i++)
+	{
+		int index = 0;
+		while (index + 1 < input[i].Length)
+		{
+			if (input[i][index][0] == input[i][index + 1][0]) // x is const
+			{
+				int x = input[i][index][0];
+				int miny = Math.Min(input[i][index][1], input[i][index + 1][1]);
+				int maxy = Math.Max(input[i][index][1], input[i][index + 1][1]);
+
+				for (int y = miny; y <= maxy; y++)
+					cave[(x, y)] = 1;
+
+				if (x < MinX)
+					MinX = x;
+				if (x > MaxX)
+					MaxX = x;
+				if (maxy > MaxY)
+					MaxY = maxy;
+			}
+			else // y is const
+			{
+				int minx = Math.Min(input[i][index][0], input[i][index + 1][0]);
+				int maxx = Math.Max(input[i][index][0], input[i][index + 1][0]);
+				int y = input[i][index][1];
+
+				for (int x = minx; x <= maxx; x++)
+					cave[(x, y)] = 1;
+
+				if (minx < MinX)
+					MinX = minx;
+				if (maxx > MaxX)
+					MaxX = maxx;
+				if (y > MaxY)
+					MaxY = y;
+			}
+
+			index++;
+		}
+	}
+}
+
+
+void Part1()
+{
+	(int X, int Y) start = (500, 0);
+
+	var current = start;
+	while (true)
+	{
+		while (!cave.ContainsKey((current.X, current.Y + 1)))
+			current = (current.X, current.Y + 1);
+
+		// down blocked -> to down left (check fall to abyss)
+		if (current.X - 1 < MinX)
+			break;
+		if (!cave.ContainsKey((current.X - 1, current.Y + 1)))
+		{
+			current = (current.X - 1, current.Y + 1);
+			continue;
+		}
+
+		// down left blocked -> to down right (check fall to abyss)
+		if (current.X + 1 > MaxX)
+			break;
+		if (!cave.ContainsKey((current.X + 1, current.Y + 1)))
+		{
+			current = (current.X + 1, current.Y + 1);
+			continue;
+		}
+
+		// all blocked -> rest
+		cave[current] = 2;
+		current = start;
+	}
+
+	Console.WriteLine($"Part 1: {cave.Values.Count(a => a == 2)}");
+}
+
+
+void Part2()
+{
+	(int X, int Y) start = (500, 0);
+
+	var current = start;
+	while (true)
+	{
+		while (current.Y + 1 != MaxY + 2 && !cave.ContainsKey((current.X, current.Y + 1)))
+		{
+			current = (current.X, current.Y + 1);
+		}
+
+		// check floor
+		if (current.Y + 1 == MaxY + 2)
+		{
+			cave[current] = 2;
+			current = start;
+			continue;
+		}
+
+		// down blocked -> to down left
+		if (!cave.ContainsKey((current.X - 1, current.Y + 1)))
+		{
+			current = (current.X - 1, current.Y + 1);
+			continue;
+		}
+
+		// down left blocked -> to down right
+		if (!cave.ContainsKey((current.X + 1, current.Y + 1)))
+		{
+			current = (current.X + 1, current.Y + 1);
+			continue;
+		}
+
+		// all blocked -> rest (check source block)
+		cave[current] = 2;
+		if (current == start)
+			break;
+		current = start;
+	}
+
+	Console.WriteLine($"Part 2: {cave.Values.Count(a => a == 2)}");
+}
