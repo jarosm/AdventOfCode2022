@@ -1,0 +1,152 @@
+﻿
+//int part1Row = 10; // test
+int part1Row = 2000000; // puzzle input
+
+List<Pair> pairs = new List<Pair>();
+ParseInput();
+
+
+Dictionary<int, List<(int MinX, int MaxX)>> occupiedRanges = new Dictionary<int, List<(int X, int Y)>>();
+Part1();
+
+occupiedRanges = new Dictionary<int, List<(int X, int Y)>>();
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+void ParseInput()
+{
+	var input = File.ReadAllLines("input.txt").Select(a => a.Replace("Sensor at ", "").Replace(" closest beacon is at ", "").Replace(" ", "").Replace("x=", "").Replace("y=", "")
+		.Split(':').Select(b => b.Split(',').Select(c => int.Parse(c)).ToArray()).ToArray()).ToArray();
+
+	for (int i = 0; i < input.Length; i++)
+	{
+		var pair = new Pair()
+		{
+			Sensor = (input[i][0][0], input[i][0][1]),
+			Beacon = (input[i][1][0], input[i][1][1])
+		};
+		pairs.Add(pair);
+	}
+}
+
+
+void Part1()
+{
+	var filtered = pairs.Where(p => Math.Abs(p.Sensor.Y - part1Row) <= Math.Abs(p.Sensor.Y - p.Beacon.Y) + Math.Abs(p.Sensor.X - p.Beacon.X)).ToList();
+	var beaconsOnRow = filtered.Where(p => p.Beacon.Y == part1Row).Select(b => b.Beacon).Distinct().ToList();
+
+	foreach (var pair in filtered)
+	{
+		int half = Math.Abs(pair.Sensor.Y - pair.Beacon.Y) + Math.Abs(pair.Sensor.X - pair.Beacon.X) - Math.Abs(pair.Sensor.Y - part1Row);
+		AddRange(part1Row, pair.Sensor.X - half, pair.Sensor.X + half);
+	}
+
+	Console.WriteLine($"Part 1: {(occupiedRanges.ContainsKey(part1Row) ? occupiedRanges[part1Row].Sum(a => a.MaxX - a.MinX + 1) - beaconsOnRow.Count : 0)}");
+}
+
+
+void Part2()
+{
+	int part2MaxRow = 2 * part1Row;
+
+	for (int row = 0; row <= part2MaxRow; row++)
+	{
+		var filtered = pairs.Where(p => Math.Abs(p.Sensor.Y - row) <= Math.Abs(p.Sensor.Y - p.Beacon.Y) + Math.Abs(p.Sensor.X - p.Beacon.X)).ToList();
+		foreach (var pair in filtered)
+		{
+			int half = Math.Abs(pair.Sensor.Y - pair.Beacon.Y) + Math.Abs(pair.Sensor.X - pair.Beacon.X) - Math.Abs(pair.Sensor.Y - row);
+			AddRange(row, pair.Sensor.X - half, pair.Sensor.X + half);
+		}
+	}
+
+	var found = occupiedRanges.Where(a => a.Value.Count == 2).ToArray()[0];
+	Console.WriteLine($"Part 2: {(long)(found.Value[0].MaxX + 1) * 4000000 + found.Key}");
+}
+
+
+void AddRange(int row, int minX, int maxX)
+{
+	// check existence
+	if (!occupiedRanges.ContainsKey(row))
+	{
+		List<(int MinX, int MaxX)> ranges = new List<(int MinX, int MaxX)>();
+		ranges.Add((minX, maxX));
+		occupiedRanges.Add(row, ranges);
+		return;
+	}
+
+	// no overlap
+	if (!occupiedRanges[row].Any(a => minX <= a.MaxX && maxX >= a.MinX))
+	{
+		int index = 0;
+		while (index < occupiedRanges[row].Count)
+		{
+			if (maxX < occupiedRanges[row][index].MinX)
+			{
+				occupiedRanges[row].Insert(index, (minX, maxX));
+
+				// merge next
+				if (index + 1 < occupiedRanges[row].Count && occupiedRanges[row][index].MaxX + 1 == occupiedRanges[row][index + 1].MinX)
+				{
+					occupiedRanges[row][index] = (occupiedRanges[row][index].MinX, occupiedRanges[row][index + 1].MaxX);
+					occupiedRanges[row].RemoveAt(index + 1);
+				}
+
+				return;
+			}
+			index++;
+		}
+
+		occupiedRanges[row].Add((minX, maxX));
+
+		// merge prev
+		if (index - 1 >= 0 && occupiedRanges[row][index].MinX - 1 == occupiedRanges[row][index - 1].MaxX)
+		{
+			occupiedRanges[row][index - 1] = (occupiedRanges[row][index - 1].MinX, occupiedRanges[row][index].MaxX);
+			occupiedRanges[row].RemoveAt(index);
+		}
+
+		return;
+	}
+
+	// find overlap and merge
+	int i = 0;
+	while (i < occupiedRanges[row].Count)
+	{
+		if (minX <= occupiedRanges[row][i].MaxX && maxX >= occupiedRanges[row][i].MinX)
+		{
+			// check contains
+			if (minX >= occupiedRanges[row][i].MinX && maxX <= occupiedRanges[row][i].MaxX)
+				return;
+
+			occupiedRanges[row][i] = (Math.Min(minX, occupiedRanges[row][i].MinX), Math.Max(maxX, occupiedRanges[row][i].MaxX));
+			break;
+		}
+		i++;
+	}
+
+	// merge prev
+	while (i - 1 >= 0 && occupiedRanges[row][i].MinX - 1 == occupiedRanges[row][i - 1].MaxX)
+	{
+		occupiedRanges[row][i - 1] = (occupiedRanges[row][i - 1].MinX, occupiedRanges[row][i].MaxX);
+		occupiedRanges[row].RemoveAt(i);
+		i--;
+	}
+
+	// merge next
+	while (i + 1 < occupiedRanges[row].Count && occupiedRanges[row][i].MaxX + 1 >= occupiedRanges[row][i + 1].MinX)
+	{
+		occupiedRanges[row][i] = (occupiedRanges[row][i].MinX, Math.Max(occupiedRanges[row][i].MaxX, occupiedRanges[row][i + 1].MaxX));
+		occupiedRanges[row].RemoveAt(i + 1);
+	}
+}
+
+
+public class Pair
+{
+	public (int X, int Y) Sensor = (0, 0);
+	public (int X, int Y) Beacon = (0, 0);
+}
