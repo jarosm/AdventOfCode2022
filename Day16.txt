@@ -1,0 +1,165 @@
+﻿
+using System.Collections;
+
+List<Valve> valves = new List<Valve>();
+Dictionary<string, int> nameToId = new Dictionary<string, int>();
+
+ParseInput();
+
+int[,] distancesFWA = new int[valves.Count, valves.Count]; // Distance computed by Floyd-Warshall algorithm
+GetDistances();
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+void ParseInput()
+{
+	var input = File.ReadAllLines("input.txt").Select(a => a.Replace("Valve ", "")
+		.Replace(" has flow rate=", ";").Replace(" tunnel leads to valve ", "").Replace(" tunnels lead to valves ", "").Replace(" ", "")
+		.Split(';')).ToArray();
+
+	foreach (var i in input)
+	{
+		Valve valve = new Valve()
+		{
+			Name = i[0],
+			Pressure = int.Parse(i[1])
+		};
+		valve.Valves.AddRange(i[2].Split(","));
+
+		nameToId[i[0]] = valves.Count;
+		valves.Add(valve);
+	}
+}
+
+
+void Part1()
+{
+	string targets = string.Join(';', valves.Where(a => a.Pressure > 0).Select(a => a.Name).ToArray());
+	Queue<(string Valve, int Minute, int Pressure, string Targets)> steps = new Queue<(string Valve, int Minute, int Pressure, string Targets)>();
+	List<int> pressures = new List<int>();
+
+	steps.Enqueue(("AA", 0, 0, targets));
+	while (steps.Count > 0)
+	{
+		var s = steps.Dequeue();
+
+		if (s.Minute >= 29 || s.Targets.Length == 0)
+		{
+			pressures.Add(s.Pressure);
+			continue;
+		}
+
+		int sId = nameToId[s.Valve];
+
+		var tg = s.Targets.Split(';', StringSplitOptions.RemoveEmptyEntries);
+		foreach (var t in tg)
+		{
+			int tId = nameToId[t];
+			if (s.Minute + distancesFWA[sId, tId] + 1 < 30) // travel + open
+				steps.Enqueue((t, s.Minute + distancesFWA[sId, tId] + 1, s.Pressure + (30 - s.Minute - distancesFWA[sId, tId] - 1) * valves[tId].Pressure, s.Targets.Replace(t, "").Replace(";;", ";").TrimStart(';')));
+			else
+				pressures.Add(s.Pressure);
+		}
+	}
+
+	Console.WriteLine($"Part 1: {pressures.Max()}");
+}
+
+
+void Part2()
+{
+	string targets = string.Join(';', valves.Where(a => a.Pressure > 0).Select(a => a.Name).ToArray());
+	Queue<(string Valve, int Minute, int Pressure, string Targets, string Path)> steps = new Queue<(string Valve, int Minute, int Pressure, string Targets, string Path)>();
+	Dictionary<HashSet<string>, int> paths = new Dictionary<HashSet<string>, int>();
+
+	steps.Enqueue(("AA", 0, 0, targets, ""));
+	while (steps.Count > 0)
+	{
+		var s = steps.Dequeue();
+
+		if (s.Path.Length > 0)
+		{
+			var p = s.Path.Split(";", StringSplitOptions.RemoveEmptyEntries);
+			paths.Add(new HashSet<string>(p), s.Pressure);
+		}
+
+		if (s.Minute >= 25 || s.Targets.Length == 0)
+			continue;
+
+		int sId = nameToId[s.Valve];
+		var tg = s.Targets.Split(';', StringSplitOptions.RemoveEmptyEntries);
+		foreach (var t in tg)
+		{
+			int tId = nameToId[t];
+			if (s.Minute + distancesFWA[sId, tId] + 1 < 26) // travel + open
+				steps.Enqueue((t, s.Minute + distancesFWA[sId, tId] + 1, s.Pressure + (26 - s.Minute - distancesFWA[sId, tId] - 1) * valves[tId].Pressure, s.Targets.Replace(t, "").Replace(";;", ";").TrimStart(';'),
+					s.Path + ";" + t));
+		}
+	}
+
+	int max = 0;
+	foreach (var k1 in paths.Keys.OrderByDescending(o => paths[o]))
+	{
+		foreach (var k2 in paths.Keys.OrderByDescending(o => paths[o]))
+		{
+			if (paths[k1] + paths[k2] < max)
+			{
+				Console.WriteLine($"Part 2: {max}");
+				return;
+			}
+			if (!k1.Overlaps(k2))
+				max = paths[k1] + paths[k2];
+		}
+	}
+
+	Console.WriteLine($"Part 2: {max}");
+}
+
+
+void GetDistances()
+{
+	for (int i = 0; i < valves.Count; i++)
+	{
+		for (int j = 0; j < valves.Count; j++)
+		{
+			if (i == j)
+				distancesFWA[i, j] = 0;
+			else
+				distancesFWA[i, j] = 1000;
+		}
+	}
+
+	for (int i = 0; i < valves.Count; i++)
+	{
+		for (int j = 0; j < valves[i].Valves.Count; j++)
+		{
+			distancesFWA[nameToId[valves[i].Name], nameToId[valves[i].Valves[j]]] = 1;
+		}
+	}
+
+	for (int k =  0; k < valves.Count; k++)
+	{
+		for (int i = 0; i < valves.Count; i++)
+		{
+			for (int j = 0; j < valves.Count; j++)
+			{
+				if (distancesFWA[i, j] > distancesFWA[i, k] + distancesFWA[k, j])
+					distancesFWA[i, j] = distancesFWA[i, k] + distancesFWA[k, j];
+			}
+		}
+	}
+}
+
+
+public class Valve
+{
+	public string Name = "";
+	public int Pressure = 0;
+	public List<string> Valves = new List<string>();
+}
