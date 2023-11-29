@@ -1,0 +1,105 @@
+﻿
+using System.Numerics;
+
+Vector3[] moves = new Vector3[] { new Vector3(-1, 0, 0), new Vector3(1, 0, 0), new Vector3(0, -1, 0), new Vector3(0, 1, 0), new Vector3(0, 0, -1), new Vector3(0, 0, 1) };
+List<Cube> cubes = new List<Cube>();
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+int[][] ParseInput()
+{
+	var input = File.ReadAllLines("input.txt").Select(a => a.Split(',').Select(b => int.Parse(b) + 1).ToArray()).ToArray(); // +1 to get empty 0 on all sides
+
+	return input;
+}
+
+
+void Part1()
+{
+	var input = ParseInput();		
+
+	foreach (var i in input)
+	{
+		int sides = 6;
+		int index = -1;
+		Vector3 c = new Vector3(i[0], i[1], i[2]);
+
+		foreach (var m in moves)
+		{
+			index = FindCube(c + m, cubes);
+			if (index >= 0)
+			{
+				sides--;
+				cubes[index].sides--;
+			}
+		}
+
+		cubes.Add(new Cube() { cube = new Vector3(i[0], i[1], i[2]), sides = sides });
+	}
+
+	Console.WriteLine($"Part 1: {cubes.Sum(a => a.sides)}");
+}
+
+
+void Part2()
+{
+	var maxDim = cubes.Aggregate(new Vector3(), (max, c) => new Vector3(Math.Max(max.X, c.cube.X), Math.Max(max.Y, c.cube.Y), Math.Max(max.Z, c.cube.Z)));
+	var fullGrid = new int[(int)maxDim.X + 2, (int)maxDim.Y + 2, (int)maxDim.Z + 2];
+
+	foreach (var c in cubes)
+		fullGrid[(int)c.cube.X, (int)c.cube.Y, (int)c.cube.Z] = 1;
+
+	var queue = new Queue<Vector3>(new Vector3[] { new Vector3() });
+	while (queue.Count > 0)
+	{
+		var c = queue.Dequeue();
+
+		foreach (var m in moves)
+		{
+			var t = c + m;
+
+			if (t.X < 0 || t.Y < 0 || t.Z < 0 || t.X >= fullGrid.GetLength(0) || t.Y >= fullGrid.GetLength(1) || t.Z >= fullGrid.GetLength(2))
+				continue;
+
+			if (fullGrid[(int)t.X, (int)t.Y, (int)t.Z] == 0) // Not a cube
+			{
+				fullGrid[(int)t.X, (int)t.Y, (int)t.Z] = 2; // Air outside
+				queue.Enqueue(t);
+			}
+		}
+	}
+
+	// Check outer sides
+	int outerSides = 0;
+	foreach (var c in cubes)
+	{
+		foreach (var m in moves)
+		{
+			var t = c.cube + m;
+			if (fullGrid[(int)t.X, (int)t.Y, (int)t.Z] == 2)
+				outerSides++;
+		}
+	}
+
+	Console.WriteLine($"Part 2: {outerSides}");
+}
+
+
+int FindCube(Vector3 c, List<Cube> cubes)
+{
+	int index = cubes.FindIndex(a => a.cube == c);
+	return index;
+}
+
+
+public class Cube
+{
+	public Vector3 cube;
+	public int sides = 0;
+}
