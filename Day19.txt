@@ -1,0 +1,134 @@
+﻿
+ParseInput();
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+List<Blueprint> ParseInput()
+{
+	var input = File.ReadAllText("input.txt");
+
+	var blueprints = input.Split()
+		.Where(x => int.TryParse(x, out var _))
+		.Select((x, i) => (int.Parse(x), i))
+		.GroupBy(v => v.i / 6)
+		.Select(g => new Blueprint(g.Select(v => v.Item1).ToList())).ToList();
+
+	return blueprints;
+}
+
+
+void Part1()
+{
+	var blueprints = ParseInput();
+
+	int totalScore = blueprints.Select((b, i) => (b, i + 1)).Aggregate(0, (s, v) => s + v.Item2 * Simulate2(v.b, 24));
+
+	Console.WriteLine($"Part 1: {totalScore}");
+}
+
+
+void Part2()
+{
+	var blueprints = ParseInput().Where((x, i) => i < 3).ToList();
+
+	int totalScore = blueprints.Where((x, i) => i < 3).Aggregate(1, (p, b) => p * Simulate2(b, 32));
+
+	Console.WriteLine($"Part 2: {totalScore}");
+}
+
+
+
+// Simulate a blueprint for a given number of rounds (Starting with a single ore robot)
+int Simulate2(Blueprint bp, int rounds) => Simulate(bp, new Counts(1, 0, 0, 0), new Counts(), 0, rounds, 0);
+
+
+int Simulate(Blueprint bp, Counts robots, Counts resources, int previouslyTriedBotFlags, int timeRemaining, int bestResult)
+{
+	if (timeRemaining == 1)
+		return Math.Max(resources[Res.Geode] + robots[Res.Geode], bestResult);
+
+	if (resources[Res.Geode] + robots[Res.Geode] * timeRemaining + (timeRemaining * (timeRemaining - 1)) / 2 < bestResult)
+		return bestResult;
+
+	Counts mostRequired = new Counts
+	(
+		Math.Max(Math.Max(bp[Res.Ore, Res.Ore], bp[Res.Clay, Res.Ore]), Math.Max(bp[Res.Obsidian, Res.Ore], bp[Res.Geode, Res.Ore])) * (timeRemaining - 1),
+		bp[Res.Obsidian, Res.Clay] * (timeRemaining - 1),
+		bp[Res.Geode, Res.Obsidian] * (timeRemaining - 1),
+		int.MaxValue
+	);
+
+	
+	for (int i = 0; i < 4; i++)
+	{
+		var robot = (Res)i;
+		var cost = bp.RobotCost(robot);
+
+		if (!(resources >= cost))
+			continue;
+
+		if ((previouslyTriedBotFlags & (1 << (int)robot)) != 0)
+			continue;
+
+		if (resources[robot] + robots[robot] * (timeRemaining - 1) >= mostRequired[robot])
+			continue;
+
+		previouslyTriedBotFlags |= (1 << (int)robot);
+
+		bestResult = Simulate(bp, robots + robot, resources + robots - cost, 0, timeRemaining - 1, bestResult);
+	}
+
+	return Simulate(bp, robots, resources + robots, previouslyTriedBotFlags, timeRemaining - 1, bestResult);
+}
+
+
+enum Res { Ore, Clay, Obsidian, Geode }
+
+
+unsafe struct Blueprint
+{
+	public Blueprint(List<int> c)
+	{
+		this[Res.Ore, Res.Ore] = c[0];
+		this[Res.Clay, Res.Ore] = c[1];
+		this[Res.Obsidian, Res.Ore] = c[2];
+		this[Res.Obsidian, Res.Clay] = c[3];
+		this[Res.Geode, Res.Ore] = c[4];
+		this[Res.Geode, Res.Obsidian] = c[5];
+	}
+
+	fixed int costs[16];
+	public int this[Res robot, Res resource]
+	{
+		get { return costs[(int)robot * 4 + (int)resource]; }
+		private set { costs[(int)robot * 4 + (int)resource] = value; }
+	}
+
+	public Counts RobotCost(Res robot)
+	  => new Counts(this[robot, Res.Ore], this[robot, Res.Clay], this[robot, Res.Obsidian], this[robot, Res.Geode]);
+}
+
+unsafe struct Counts
+{
+	public Counts(int ore, int clay, int obsidian, int geode)
+	{ c[0] = ore; c[1] = clay; c[2] = obsidian; c[3] = geode; }
+
+	fixed int c[4];
+	public int this[int r] { get => c[r]; set => c[r] = value; }
+	public int this[Res r] { get => c[(int)r]; set => c[(int)r] = value; }
+
+	public static Counts operator +(Counts a, Res res)
+	{ a[res]++; return a; }
+
+	public static Counts operator +(Counts a, Counts b) => new Counts(a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]);
+	public static Counts operator -(Counts a, Counts b) => new Counts(a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3] - b[3]);
+
+	public static bool operator >=(Counts a, Counts b) => a[0] >= b[0] && a[1] >= b[1] && a[2] >= b[2] && a[3] >= b[3];
+	public static bool operator <=(Counts a, Counts b) => throw new NotImplementedException(); // Don't need this one but C# insists
+}
