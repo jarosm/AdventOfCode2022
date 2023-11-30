@@ -1,0 +1,78 @@
+﻿
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+List<(long value, int index)> ParseInput(long key)
+{
+	var input = File.ReadAllLines("input.txt").Select((x, i) => (long.Parse(x) * key, i)).ToList();
+
+	return input;
+}
+
+
+void Part1()
+{
+	var list = ParseInput(1);
+
+	var lookup = Enumerable.Range(0, list.Count).ToArray();
+
+	for (int i = 0; i < list.Count; i++)
+	{
+		var listI = lookup[i];
+		var v = list[listI];
+
+		// Value will be removed before insert to new position
+		int offset = (int)(v.value % (list.Count - 1));
+		int newPos = (listI + offset + (list.Count - 1)) % (list.Count - 1);
+
+		list.RemoveAt(listI);
+		list.Insert(newPos, v);
+
+		// Update lookup
+		for (int j = 0; j < list.Count; j++)
+			lookup[list[j].index] = j;
+	}
+
+	int zeroIndex = list.IndexOf(list.Where(v => v.value == 0).First());
+	long sum = list[(1000 + zeroIndex) % list.Count].value + list[(2000 + zeroIndex) % list.Count].value + list[(3000 + zeroIndex) % list.Count].value;
+
+	Console.WriteLine($"Part 1: {sum}");
+}
+
+
+void Part2()
+{
+	var list = ParseInput(811589153);
+
+	var lookup = Enumerable.Range(0, list.Count).ToArray();
+
+	for (int k = 0; k < 10; k++)
+	{
+		for (int i = 0; i < list.Count; i++)
+		{
+			var listI = lookup[i];
+			var v = list[listI];
+
+			// Value will be removed before insert to new position
+			int offset = (int)(v.value % (list.Count - 1));
+			int newPos = (listI + offset + (list.Count - 1)) % (list.Count - 1);
+
+			list.RemoveAt(listI);
+			list.Insert(newPos, v);
+
+			// Update lookup
+			for (int j = 0; j < list.Count; j++)
+				lookup[list[j].index] = j;
+		}
+	}
+
+	int zeroIndex = list.IndexOf(list.Where(v => v.value == 0).First());
+	long sum = list[(1000 + zeroIndex) % list.Count].value + list[(2000 + zeroIndex) % list.Count].value + list[(3000 + zeroIndex) % list.Count].value;
+
+	Console.WriteLine($"Part 2: {sum}");
+}
