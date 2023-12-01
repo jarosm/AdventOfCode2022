@@ -1,0 +1,197 @@
+﻿
+using System.Linq;
+
+Dictionary<string, object> monkeys = new Dictionary<string, object>(); // Conteins int or (string monkey1, string operation, string monkey2)
+ParseInput();
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+void ParseInput()
+{
+	var input = File.ReadAllLines("input.txt");
+
+	foreach (var line in input)
+	{
+		string[] t = line.Replace(": ", ":").Split(':');
+		bool isNum = long.TryParse(t[1], out var num);
+		if (isNum)
+			monkeys[t[0]] = num;
+		else
+		{
+			string[] op = t[1].Split(" ");
+			monkeys[t[0]] = (op[0], op[1], op[2]);
+		}
+	}
+}
+
+
+void Part1()
+{
+	Console.WriteLine($"Part 1: {ResolveMonkeys("root")}");
+}
+
+
+void Part2()
+{
+	var root = ((string monkey1, string operation, string monkey2))monkeys["root"];
+
+	string m1 = CreateEquation(root.monkey1);
+	string m2 = CreateEquation(root.monkey2);
+
+	string eq = "";
+	long val = 0;
+	if (m1.Contains("x"))
+	{
+		eq = m1;
+		val = long.Parse(m2);
+	}
+    else
+	{
+		eq = m2;
+		val = long.Parse(m1);
+	}
+
+	char[] list = { '+', '-', '*', '/' };
+	while (eq != "x")
+	{
+		eq = eq.Substring(1, eq.Length - 2);
+		char op = 'x';
+		long v = 0;
+
+		char firstOp = eq.ToArray().Where(c => list.Contains(c)).FirstOrDefault();
+		char lastOp = eq.ToArray().Where(c => list.Contains(c)).LastOrDefault();
+		if (eq.StartsWith("(") || eq.StartsWith("x")) // number last
+		{
+			int i = eq.LastIndexOf(lastOp);
+			op = lastOp;
+			v = long.Parse(eq.Substring(i + 1, eq.Length - i - 1));
+			eq = eq.Substring(0, i);
+
+			switch (op)
+			{
+				case '+':
+					val -= v;
+					break;
+				case '-':
+					val += v;
+					break;
+				case '*':
+					val /= v;
+					break;
+				case '/':
+					val *= v;
+					break;
+			}
+		}
+		else // number first
+		{
+			int i = eq.IndexOf(firstOp);
+			op = firstOp;
+			v = long.Parse(eq.Substring(0, i));
+			eq = eq.Substring(i + 1);
+
+			switch (op)
+			{
+				case '+':
+					val -= v;
+					break;
+				case '-':
+					val = v - val;
+					break;
+				case '*':
+					val /= v;
+					break;
+				case '/':
+					val = v / val;
+					break;
+			}
+		}
+	}
+
+	Console.WriteLine($"Part 2: {val}");
+}
+
+
+long ResolveMonkeys(string monkey)
+{
+	long result = 0;
+
+	if (monkeys.ContainsKey(monkey))
+	{
+		if (monkeys[monkey].GetType() == typeof(long))
+			result = (long)monkeys[monkey];
+		else
+		{
+			var m = ((string monkey1, string operation, string monkey2))monkeys[monkey];
+			long m1 = ResolveMonkeys(m.monkey1);
+			long m2 = ResolveMonkeys(m.monkey2);
+
+			switch (m.operation)
+			{
+				case "+":
+					result = m1 + m2;
+					break;
+				case "-":
+					result = m1 - m2;
+					break;
+				case "*":
+					result = m1 * m2;
+					break;
+				case "/":
+					result = m1 / m2;
+					break;
+			}
+		}
+	}
+
+	return result;
+}
+
+
+string CreateEquation(string monkey)
+{
+	string result = "";
+
+	if (monkey == "humn")
+		result = "x";
+	else if (monkeys.ContainsKey(monkey))
+	{
+		if (monkeys[monkey].GetType() == typeof(long))
+			result = ((long)monkeys[monkey]).ToString();
+		else
+		{
+			var m = ((string monkey1, string operation, string monkey2))monkeys[monkey];
+			string m1 = CreateEquation(m.monkey1);
+			string m2 = CreateEquation(m.monkey2);
+
+			if (m1.Contains("x") || m2.Contains("x"))
+				result = $"({m1}{m.operation}{m2})";
+			else
+			{
+				switch (m.operation)
+				{
+					case "+":
+						result = (long.Parse(m1) + long.Parse(m2)).ToString();
+						break;
+					case "-":
+						result = (long.Parse(m1) - long.Parse(m2)).ToString();
+						break;
+					case "*":
+						result = (long.Parse(m1) * long.Parse(m2)).ToString();
+						break;
+					case "/":
+						result = (long.Parse(m1) / long.Parse(m2)).ToString();
+						break;
+				}
+			}
+		}
+	}
+
+	return result;
+}
