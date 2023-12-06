@@ -1,0 +1,134 @@
+﻿
+using System.Collections.Generic;
+using System.Numerics;
+
+Vector2[][] lookupDirs = new Vector2[][]
+{
+	new Vector2[] { new Vector2(-1, -1), new Vector2(0, -1), new Vector2(1, -1) }, // North
+	new Vector2[] { new Vector2(-1, 1), new Vector2(0, 1), new Vector2(1, 1) }, // South
+	new Vector2[] { new Vector2(-1, -1), new Vector2(-1, 0), new Vector2(-1, 1) }, // West
+	new Vector2[] { new Vector2(1, -1), new Vector2(1, 0), new Vector2(1, 1) } // East
+};
+
+Vector2[] checkDirs = new Vector2[] { new Vector2(-1, -1), new Vector2(0, -1), new Vector2(1, -1), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1), new Vector2(-1, 1), new Vector2(-1, 0) }; // Around
+
+Vector2[] moveDirs = new Vector2[] { new Vector2(0, -1), new Vector2(0, 1), new Vector2(-1, 0), new Vector2(1, 0) }; // North, South, West, East
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+HashSet<Vector2> ParseInput()
+{
+	var input = File.ReadAllLines("input.txt");
+
+	HashSet<Vector2> elves = new HashSet<Vector2>();
+	for (int r = 0; r < input.Length; r++)
+	{
+		for (int c = 0; c < input[r].Length; c++)
+		{
+			if (input[r][c] == '#')
+				elves.Add(new Vector2(c, r));
+		}
+	}
+
+	return elves;
+}
+
+
+void Part1()
+{
+	var elves = ParseInput();
+
+	MoveElves(elves);
+
+	var mm = GetMinMax(elves);
+	int tiles = (mm.maxX - mm.minX + 1) * (mm.maxY - mm.minY + 1) - elves.Count;
+
+	Console.WriteLine($"Part 1: {tiles}");
+}
+
+
+void Part2()
+{
+	var elves = ParseInput();
+
+	var round = MoveElves(elves, true);
+
+	Console.WriteLine($"Part 2: {round}");
+}
+
+
+(int minX, int maxX, int minY, int maxY) GetMinMax(HashSet<Vector2> elves)
+{
+	int minX = (int)elves.Min(e => e.X);
+	int maxX = (int)elves.Max(e => e.X);
+	int minY = (int)elves.Min(e => e.Y);
+	int maxY = (int)elves.Max(e => e.Y);
+
+	return (minX, maxX, minY, maxY);
+}
+
+
+int MoveElves(HashSet<Vector2> elves, bool part2 = false)
+{
+	int lookupIndex = 0;
+	int round = 1;
+	while (part2 || round <= 10)
+	{
+		HashSet<(Vector2 elf, Vector2 propose)> proposes = new HashSet<(Vector2 elf, Vector2 propose)>();
+
+		foreach (var elf in elves)
+		{
+			// Check surroundings
+			bool elfFound = false;
+			for (int i = 0; i < checkDirs.Length; i++)
+			{
+				if (elves.Contains(elf + checkDirs[i]))
+				{
+					elfFound = true;
+					break;
+				}
+			}
+
+			// No other elf around, then not moving
+			if (!elfFound)
+				continue;
+
+			int indexL = lookupIndex;
+			int counter = 0;
+			while (elfFound && counter < 4)
+			{
+				if (!elves.Contains(elf + lookupDirs[indexL][0]) && !elves.Contains(elf + lookupDirs[indexL][1]) && !elves.Contains(elf + lookupDirs[indexL][2]))
+					elfFound = false;
+				else
+				{
+					indexL = (indexL + 1) % 4;
+					counter++;
+				}
+			}
+
+			if (!elfFound)
+				proposes.Add((elf, elf + moveDirs[indexL]));
+		}
+
+		if (proposes.Count == 0)
+			break;
+
+		var moves = proposes.GroupBy(p => p.propose).Where(g => g.Count() == 1).Select(g => g.First()).ToList();
+		foreach (var move in moves)
+		{
+			elves.Remove(move.elf);
+			elves.Add(move.propose);
+		}
+
+		lookupIndex = (lookupIndex + 1) % 4;
+		round++;
+	}
+
+	return round;
+}
