@@ -1,0 +1,234 @@
+﻿
+using System.Collections;
+using System.Collections.Generic;
+using System.Numerics;
+
+int rowCount, colCount;
+int[,] map;
+string[] commands;
+
+Dictionary<(Vector2 position, int facing), (Vector2 newPosition, int newFacing)> transitions = new Dictionary<(Vector2 position, int facing), (Vector2 newPosition, int newFacing)>();
+
+Vector2[] dirs = new Vector2[] { new Vector2(1, 0), new Vector2(0, 1), new Vector2(-1, 0), new Vector2(0, -1) }; // x, y - right, down, left, up
+
+ParseInput();
+
+Part1();
+
+Part2();
+
+Console.WriteLine("end");
+Console.ReadLine();
+
+
+void ParseInput()
+{
+	var input = File.ReadAllLines("input.txt").ToList();
+
+	commands = input[input.Count - 1].Replace("R", ";R;").Replace("L", ";L;").Split(';');
+	input.RemoveAt(input.Count - 1);
+	input.RemoveAt(input.Count - 1);
+
+	rowCount = input.Count;
+	colCount = input.Max(x => x.Length);
+	map = new int[rowCount, colCount];
+
+	for (int r = 0; r < rowCount; r++)
+		for (int c = 0; c < input[r].Length; c++)
+			if (input[r][c] == '.')
+				map[r, c] = 1;
+			else if (input[r][c] == '#')
+				map[r, c] = 2;
+
+	// Find corners
+	HashSet<Vector2> corners = new HashSet<Vector2>();
+	if (map[0, 0] == 0)
+	{
+		corners.Add(FindCorner(new Vector2(0, 0), dirs[0], dirs[1], dirs[2]));
+		corners.Add(FindCorner(new Vector2(0, 0), dirs[1], dirs[0], dirs[3]));
+	}
+	if (map[0, colCount - 1] == 0)
+	{
+		corners.Add(FindCorner(new Vector2(colCount - 1, 0), dirs[2], dirs[1], dirs[0]));
+		corners.Add(FindCorner(new Vector2(colCount - 1, 0), dirs[1], dirs[2], dirs[3]));
+	}
+	if (map[rowCount - 1, 0] == 0)
+	{
+		corners.Add(FindCorner(new Vector2(0, rowCount - 1), dirs[0], dirs[3], dirs[2]));
+		corners.Add(FindCorner(new Vector2(0, rowCount - 1), dirs[3], dirs[0], dirs[1]));
+	}
+	if (map[rowCount - 1, colCount - 1] == 0)
+	{
+		corners.Add(FindCorner(new Vector2(colCount - 1, rowCount - 1), dirs[2], dirs[3], dirs[0]));
+		corners.Add(FindCorner(new Vector2(colCount - 1, rowCount - 1), dirs[3], dirs[2], dirs[1]));
+	}
+
+	// Map transitions
+	foreach (var corner in corners)
+	{
+		// Dir1 always rotates right at corner
+		// Dir2 always rotates left at corner
+
+		// Up, Left
+		int dir1 = 3, dir2 = 2;
+		Vector2 test = corner + dirs[dir1] + dirs[dir2];
+		if (map[(int)test.Y, (int)test.X] != 0)
+		{
+			// Right, Up
+			dir1 = 0; dir2 = 3;
+			test = corner + dirs[dir1] + dirs[dir2];
+			if (map[(int)test.Y, (int)test.X] != 0)
+			{
+				// Down, Right
+				dir1 = 1; dir2 = 0;
+				test = corner + dirs[dir1] + dirs[dir2];
+				if (map[(int)test.Y, (int)test.X] != 0)
+				{
+					// Left, Down
+					dir1 = 2; dir2 = 1;
+				}
+			}
+		}
+
+		int cornerCount = 0;
+		Vector2 pos1 = corner, pos2 = corner;
+		while (cornerCount < 2) // Two corners simultaneously ends current run
+		{
+			cornerCount = 0;
+
+			// Test dir 1. If corner, rotate right, else move one step.
+			test = pos1 + dirs[dir1];
+			if (test.Y < 0 || test.X < 0 || test.Y >= rowCount || test.X >= colCount || map[(int)test.Y, (int)test.X] == 0)
+			{
+				dir1 = (dir1 + 1) % 4;
+				cornerCount++;
+			}
+			else
+				pos1 = pos1 + dirs[dir1];
+
+			// Test dir 2. If corner, rotate right, else move one step.
+			test = pos2 + dirs[dir2];
+			if (test.Y < 0 || test.X < 0 || test.Y >= rowCount || test.X >= colCount || map[(int)test.Y, (int)test.X] == 0)
+			{
+				dir2 = (dir2 - 1 + 4) % 4;
+				cornerCount++;
+			}
+			else
+				pos2 = pos2 + dirs[dir2];
+
+			// Register both transitions
+			if (cornerCount < 2)
+			{
+				transitions.Add((pos1, (dir1 - 1 + 4) % 4), (pos2, (dir2 - 1 + 4) % 4)); // Dir 1 has empty space on left side (dir of move) and move continous on left side of dir 2
+				transitions.Add((pos2, (dir2 + 1) % 4), (pos1, (dir1 + 1) % 4)); // Dir 2 has empty space on right side (dir of move) and move continous on right side of dir 1
+			}
+		}
+	}
+}
+
+
+void Part1()
+{
+	int facing = 0;
+	Vector2 position = new Vector2(0, 0);
+
+	// Start
+	while (map[(int)position.Y, (int)position.X] != 1)
+		position += dirs[facing];
+
+	int index = 0;
+	while (index < commands.Length)
+	{
+		if (commands[index] == "R") // Turn right
+			facing = (facing + 1) % 4;
+		else if (commands[index] == "L") // Turn left
+			facing = (facing - 1 + 4) % 4;
+		else // Move
+		{
+			int steps = int.Parse(commands[index]);
+			for (int i = 0; i < steps; i++)
+			{
+				Vector2 nextPos = position + dirs[facing];
+
+				if (nextPos.Y < 0 || nextPos.X < 0 || nextPos.Y >= rowCount || nextPos.X >= colCount || map[(int)nextPos.Y, (int)nextPos.X] == 0)
+				{
+					nextPos = position + dirs[facing] * (-1);
+					while (nextPos.Y > 0 && nextPos.X > 0 && nextPos.Y < rowCount - 1 && nextPos.X < colCount - 1)
+					{
+						var test = nextPos + dirs[facing] * (-1);
+						if (map[(int)test.Y, (int)test.X] == 0)
+							break;
+
+						nextPos = nextPos + dirs[facing] * (-1);
+					}
+				}
+
+				if (map[(int)nextPos.Y, (int)nextPos.X] == 2)
+					break;
+
+				position = nextPos;
+			}
+		}
+
+		index++;
+	}
+
+	Console.WriteLine($"Part 1: {1000 * (position.Y + 1) + 4 * (position.X + 1) + facing}");
+}
+
+
+void Part2()
+{
+	int facing = 0;
+	Vector2 position = new Vector2(0, 0);
+
+	// Start
+	while (map[(int)position.Y, (int)position.X] != 1)
+		position += dirs[facing];
+
+	int index = 0;
+	while (index < commands.Length)
+	{
+		if (commands[index] == "R") // Turn right
+			facing = (facing + 1) % 4;
+		else if (commands[index] == "L") // Turn left
+			facing = (facing - 1 + 4) % 4;
+		else // Move
+		{
+			int steps = int.Parse(commands[index]);
+			for (int i = 0; i < steps; i++)
+			{
+				Vector2 nextPos = position + dirs[facing];
+				int newFacing = facing;
+
+				if (nextPos.Y < 0 || nextPos.X < 0 || nextPos.Y >= rowCount || nextPos.X >= colCount || map[(int)nextPos.Y, (int)nextPos.X] == 0)
+				{
+					var n = transitions[(position, facing)];
+					nextPos = n.newPosition;
+					newFacing = n.newFacing;
+				}
+
+				if (map[(int)nextPos.Y, (int)nextPos.X] == 2)
+					break;
+
+				position = nextPos;
+				facing = newFacing;
+			}
+		}
+
+		index++;
+	}
+
+	Console.WriteLine($"Part 2: {1000 * (position.Y + 1) + 4 * (position.X + 1) + facing}");
+}
+
+
+Vector2 FindCorner(Vector2 start, Vector2 dir1, Vector2 dir2, Vector2 lookDir)
+{
+	Vector2 pos = start;
+	while (map[(int)pos.Y, (int)pos.X] == 0)
+		pos += dir1;
+	while (map[(int)(pos.Y + lookDir.Y), (int)(pos.X + lookDir.X)] == 0)
+		pos += dir2;
+	return pos;
+}
